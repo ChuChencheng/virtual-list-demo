@@ -1,6 +1,14 @@
 <template>
   <div id="app">
-    <List
+    <div class="tab-switch">
+      <button :class="{ active: tab === 'NormalList' }" @click="tab = 'NormalList'">定高普通列表</button>
+      <button :class="{ active: tab === 'VirtualList' }" @click="tab = 'VirtualList'">定高虚拟列表</button>
+      <button :class="{ active: tab === 'PropHeight' }" @click="tab = 'PropHeight'">不定高 Prop 传入高度的虚拟列表</button>
+      <button :class="{ active: tab === 'VirtualListSetData' }" @click="tab = 'VirtualListSetData'">使用方法设置数据的虚拟列表</button>
+    </div>
+    <component
+      ref="list"
+      :is="tab"
       :data="data"
       :itemHeightGetter="itemHeightGetter"
     />
@@ -13,11 +21,11 @@
  * NormalList: 定高的普通列表
  * VirtualList: 定高的虚拟列表
  * PropHeight: 不定高、通过 Prop 传入高度的虚拟列表
- * 在此切换引入的文件查看不同列表的 demo
  */
-// import List from './components/NormalList.vue'
-import List from './components/VirtualList.vue'
-// import List from './components/PropHeight.vue'
+import NormalList from './components/NormalList.vue'
+import VirtualList from './components/VirtualList.vue'
+import PropHeight from './components/PropHeight.vue'
+import VirtualListSetData from './components/VirtualListSetData.vue'
 
 const data = []
 for (let i = 0; i < 100000; i++) {
@@ -31,28 +39,81 @@ for (let i = 0; i < 100000; i++) {
 export default {
   name: 'app',
   components: {
-    List,
+    NormalList,
+    VirtualList,
+    PropHeight,
+    VirtualListSetData,
   },
   data () {
     return {
-      data,
+      data: [],
+
+      tab: 'VirtualListSetData',
     }
   },
   methods: {
     itemHeightGetter (index) {
       return 35 + (index % 5) * (Math.random() < 0.5 ? -1 : 1)
     },
+
+    setData () {
+      this.$refs.list.setData(data)
+    },
+  },
+  watch: {
+    tab: {
+      immediate: true,
+      handler () {
+        this.$nextTick(() => {
+          if (this.tab === 'VirtualListSetData') {
+            this.data = []
+            this.setData()
+          } else {
+            this.data = data
+          }
+        })
+      },
+    },
   },
 }
 </script>
 
 <style>
+* {
+  margin: 0;
+  padding: 0;
+}
+
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+}
+
+.tab-switch {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.tab-switch button {
+  cursor: pointer;
+  margin-right: 20px;
+  min-width: 100px;
+  min-height: 38px;
+  margin-right: 30px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background: lightcyan;
+}
+
+.tab-switch button:focus {
+  outline: none;
+}
+
+.tab-switch .active {
+  background: lightblue;
 }
 </style>

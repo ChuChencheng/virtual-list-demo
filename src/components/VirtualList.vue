@@ -81,6 +81,11 @@ export default {
     // 因为要获取 scrollTop 跟 clientHeight ，所以要在 mounted 更新可见数据
     this.updateVisibleList()
   },
+  watch: {
+    data () {
+      this.updateVisibleList()
+    },
+  },
 }
 </script>
 
