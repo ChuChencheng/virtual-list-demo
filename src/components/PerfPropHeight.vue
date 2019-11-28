@@ -37,7 +37,7 @@
 // 通过 Prop 传入列表项高度的虚拟列表实现
 
 export default {
-  name: 'PropHeight',
+  name: 'PerfPropHeight',
   props: {
     /** 数据 */
     data: {
@@ -95,14 +95,24 @@ export default {
         start++
       }
       const clientHeight = this.$el.clientHeight
+      let lastTotalHeight = this.totalHeight
       let end = start
       /** 可见列表高度，需超过 clientHeight */
       let visibleHeight = 0
-      const first = this.itemHeightRecord[start] || (this.itemHeightRecord[start] = this.itemHeightGetter(start))
+      let first = this.itemHeightRecord[start]
+      if (!first) {
+        first = this.itemHeightGetter(start)
+        lastTotalHeight += first - this.itemHeight
+        this.$set(this.itemHeightRecord, start, first)
+      }
       while (visibleHeight - first < clientHeight && end < this.data.length) {
-        const currentHeight = this.itemHeightRecord[end] || this.itemHeightGetter(end)
-        // 更新记录
-        this.$set(this.itemHeightRecord, end, currentHeight)
+        let currentHeight = this.itemHeightRecord[end]
+        if (!currentHeight) {
+          currentHeight = this.itemHeightGetter(end)
+          lastTotalHeight += currentHeight - this.itemHeight
+          // 更新记录
+          this.$set(this.itemHeightRecord, end, currentHeight)
+        }
         visibleHeight += currentHeight
         end++
       }
@@ -110,9 +120,7 @@ export default {
       this.visibleList = this.data.slice(start, end)
       /** 更新已滚过的高度 */
       this.topHeight = scrolledHeight
-      console.time("updateTotalHeight")
-      this.updateTotalHeight()
-      console.timeEnd("updateTotalHeight")
+      this.totalHeight = lastTotalHeight
       console.timeEnd("updateVisibleList")
     },
 
@@ -121,11 +129,13 @@ export default {
     }
   },
   mounted () {
+    this.totalHeight = this.data.length * this.itemHeight
     // 因为要获取 scrollTop 跟 clientHeight ，所以要在 mounted 更新可见数据
     this.updateVisibleList()
   },
   watch: {
     data () {
+      this.totalHeight = this.data.length * this.itemHeight
       this.updateVisibleList()
     },
   },
