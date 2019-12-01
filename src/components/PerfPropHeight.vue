@@ -35,7 +35,7 @@
 <script>
 /* eslint-disable no-console */
 // 通过 Prop 传入列表项高度的虚拟列表实现
-
+import BinaryIndexedTree from '@/util/BinaryIndexedTree'
 export default {
   name: 'PerfPropHeight',
   props: {
@@ -73,6 +73,18 @@ export default {
     }
   },
   methods: {
+    initBIT () {
+      if (this.data.length > 0) {
+        this.binaryIndexedTree = new BinaryIndexedTree(Array(this.data.length).fill(this.itemHeight))
+      } else {
+        this.binaryIndexedTree = null
+      }
+    },
+    updateBIT (i, val) {
+      if (this.binaryIndexedTree) {
+        this.binaryIndexedTree.update(i, val)
+      }
+    },
     updateTotalHeight () {
       let height = 0
       const length = this.data.length
@@ -82,18 +94,24 @@ export default {
       this.totalHeight = height
     },
 
-    /** 更新可见列表 */
-    updateVisibleList () {
-      console.time("updateVisibleList")
-      const scrollTop = this.$el.scrollTop
+    findNearestItemIndexAndTop (scrollTop) {
       let start = 0
       /** 滚过多少高度 */
       let scrolledHeight = 0
-      while (scrolledHeight < scrollTop) {
-        if (scrolledHeight + (this.itemHeightRecord[start] || this.itemHeight) >= scrollTop) break
-        scrolledHeight += this.itemHeightRecord[start] || this.itemHeight
-        start++
+      if (this.binaryIndexedTree) {
+        start = Math.max(this.binaryIndexedTree.findGe(scrollTop) - 1, 0)
+        scrolledHeight = this.binaryIndexedTree.prefixSum(start)
       }
+      return {
+        start,
+        scrolledHeight
+      }
+    },
+
+    /** 更新可见列表 */
+    updateVisibleList (scrollTop = 0) {
+      console.time("updateVisibleList")
+      let { start, scrolledHeight } = this.findNearestItemIndexAndTop(scrollTop)
       const clientHeight = this.$el.clientHeight
       let lastTotalHeight = this.totalHeight
       let end = start
@@ -102,14 +120,18 @@ export default {
       let first = this.itemHeightRecord[start]
       if (!first) {
         first = this.itemHeightGetter(start)
-        lastTotalHeight += first - this.itemHeight
+        let diffrence = first - this.itemHeight
+        lastTotalHeight += diffrence
+        this.updateBIT(end + 1, diffrence)
         this.$set(this.itemHeightRecord, start, first)
       }
       while (visibleHeight - first < clientHeight && end < this.data.length) {
         let currentHeight = this.itemHeightRecord[end]
         if (!currentHeight) {
           currentHeight = this.itemHeightGetter(end)
-          lastTotalHeight += currentHeight - this.itemHeight
+          let diffrence = currentHeight - this.itemHeight
+          this.updateBIT(end + 1, diffrence)
+          lastTotalHeight += diffrence
           // 更新记录
           this.$set(this.itemHeightRecord, end, currentHeight)
         }
@@ -125,17 +147,23 @@ export default {
     },
 
     handleScroll () {
-      this.updateVisibleList()
+      this.updateVisibleList(this.$el.scrollTop)
     }
   },
   mounted () {
+    if (this.data.length === 0) {
+      return
+    }
     this.totalHeight = this.data.length * this.itemHeight
+    this.initBIT()
+
     // 因为要获取 scrollTop 跟 clientHeight ，所以要在 mounted 更新可见数据
     this.updateVisibleList()
   },
   watch: {
     data () {
       this.totalHeight = this.data.length * this.itemHeight
+      this.initBIT()
       this.updateVisibleList()
     },
   },
