@@ -4,6 +4,7 @@
       <button :class="{ active: tab === 'NormalList' }" @click="tab = 'NormalList'">定高普通列表</button>
       <button :class="{ active: tab === 'VirtualList' }" @click="tab = 'VirtualList'">定高虚拟列表</button>
       <button :class="{ active: tab === 'PropHeight' }" @click="tab = 'PropHeight'">不定高 Prop 传入高度的虚拟列表</button>
+      <button :class="{ active: tab === 'PerfPropHeight' }" @click="tab = 'PerfPropHeight'">算法优化后的不定高 Prop 传入高度的虚拟列表</button>
       <button :class="{ active: tab === 'VirtualListSetData' }" @click="tab = 'VirtualListSetData'">使用方法设置数据的虚拟列表</button>
     </div>
     <component
@@ -25,6 +26,7 @@
 import NormalList from './components/NormalList.vue'
 import VirtualList from './components/VirtualList.vue'
 import PropHeight from './components/PropHeight.vue'
+import PerfPropHeight from './components/PerfPropHeight.vue'
 import VirtualListSetData from './components/VirtualListSetData.vue'
 
 const data = []
@@ -42,18 +44,19 @@ export default {
     NormalList,
     VirtualList,
     PropHeight,
+    PerfPropHeight,
     VirtualListSetData,
   },
   data () {
     return {
       data: [],
 
-      tab: 'VirtualListSetData',
+      tab: 'PerfPropHeight',
     }
   },
   methods: {
     itemHeightGetter (index) {
-      return 35 + (index % 5) * (Math.random() < 0.5 ? -1 : 1)
+      return 40 + (index % 10) * (Math.random() < 0.5 ? -1 : 1)
     },
 
     setData () {
