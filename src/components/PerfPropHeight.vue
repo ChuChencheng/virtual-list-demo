@@ -70,6 +70,14 @@ export default {
     }
   },
   methods: {
+    updateTotalHeight () {
+      if (this.binaryIndexedTree) {
+        this.totalHeight = this.binaryIndexedTree.prefixSum()
+      } else {
+        this.totalHeight = 0
+      }
+
+    },
     initBIT () {
       if (this.data.length > 0) {
         this.binaryIndexedTree = new BinaryIndexedTree(Array(this.data.length).fill(this.itemHeight))
@@ -83,7 +91,7 @@ export default {
       }
     },
 
-    findNearestItemIndexAndTop (scrollTop) {
+    findStartItemIndexAndTop (scrollTop) {
       let start = 0
       /** 滚过多少高度 */
       let scrolledHeight = 0
@@ -96,7 +104,7 @@ export default {
         scrolledHeight
       }
     },
-    getVisibleList (start, end) {
+    createVisibleList (start, end) {
       let list = []
       for (let i = start; i < end; i++) {
         list.push({
@@ -107,42 +115,33 @@ export default {
       return list
     },
 
+    getActualHeight(index){
+      let height = this.itemHeightRecord[index]
+      if (!height) {
+        height = this.itemHeightGetter(index)
+        this.updateBIT(index + 1, height - this.itemHeight)
+        this.itemHeightRecord[index] = height
+      }
+      return height
+    },
+
     /** 更新可见列表 */
     updateVisibleList (scrollTop = 0) {
       console.time("updateVisibleList")
-      let { start, scrolledHeight } = this.findNearestItemIndexAndTop(scrollTop)
+      let { start, scrolledHeight } = this.findStartItemIndexAndTop(scrollTop)
       const clientHeight = this.$el.clientHeight
-      let lastTotalHeight = this.totalHeight
       let end = start
       /** 可见列表高度，需超过 clientHeight */
-      let visibleHeight = 0
-      let first = this.itemHeightRecord[start]
-      if (!first) {
-        first = this.itemHeightGetter(start)
-        let diffrence = first - this.itemHeight
-        lastTotalHeight += diffrence
-        this.updateBIT(end + 1, diffrence)
-        this.itemHeightRecord[start] = first
-      }
-      while (visibleHeight - first < clientHeight && end < this.data.length) {
-        let currentHeight = this.itemHeightRecord[end]
-        if (!currentHeight) {
-          currentHeight = this.itemHeightGetter(end)
-          let diffrence = currentHeight - this.itemHeight
-          this.updateBIT(end + 1, diffrence)
-          lastTotalHeight += diffrence
-          // 更新记录
-          this.itemHeightRecord[end] = currentHeight
-        }
-        visibleHeight += currentHeight
-        end++
+      let visibleHeight = - this.getActualHeight(start)
+      while (visibleHeight < clientHeight && end < this.data.length) {
+        visibleHeight += this.getActualHeight(end++)
       }
 
       /** 赋值可见列表 */
-      this.visibleList = this.getVisibleList(start, end)
+      this.visibleList = this.createVisibleList(start, end)
       /** 更新已滚过的高度 */
       this.topHeight = scrolledHeight
-      this.totalHeight = lastTotalHeight
+      this.updateTotalHeight()
       console.timeEnd("updateVisibleList")
     },
 
@@ -151,7 +150,7 @@ export default {
     }
   },
   created () {
-    this.itemHeightRecord = []
+    this.itemHeightRecord = Object.create(null)
     if (this.data.length === 0) {
       return
     }
@@ -164,7 +163,7 @@ export default {
   },
   watch: {
     data () {
-      this.itemHeightRecord = []
+      this.itemHeightRecord = Object.create(null)
       this.totalHeight = this.data.length * this.itemHeight
       this.initBIT()
       this.updateVisibleList()
