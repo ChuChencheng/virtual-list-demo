@@ -25,7 +25,7 @@
         :key="item.id"
         class="visible-list-item"
         :style="{
-          height: `${itemHeightRecord[item.index] || itemHeight}px`,
+          height: `${item.height}px`,
         }"
       >{{ item.value }}</div>
     </div>
@@ -62,9 +62,6 @@ export default {
       /** 可见的列表 */
       visibleList: [],
 
-      /** 每个列表项高度记录 */
-      itemHeightRecord: [],
-
       /** 容器总高度 */
       totalHeight: 0,
 
@@ -85,14 +82,6 @@ export default {
         this.binaryIndexedTree.update(i, val)
       }
     },
-    updateTotalHeight () {
-      let height = 0
-      const length = this.data.length
-      for (let i = 0; i < length; i++) {
-        height += (this.itemHeightRecord[i] || this.itemHeight)
-      }
-      this.totalHeight = height
-    },
 
     findNearestItemIndexAndTop (scrollTop) {
       let start = 0
@@ -106,6 +95,16 @@ export default {
         start,
         scrolledHeight
       }
+    },
+    getVisibleList (start, end) {
+      let list = []
+      for (let i = start; i < end; i++) {
+        list.push({
+          ...this.data[i],
+          height: this.itemHeightRecord[i] || this.itemHeight
+        })
+      }
+      return list
     },
 
     /** 更新可见列表 */
@@ -123,7 +122,7 @@ export default {
         let diffrence = first - this.itemHeight
         lastTotalHeight += diffrence
         this.updateBIT(end + 1, diffrence)
-        this.$set(this.itemHeightRecord, start, first)
+        this.itemHeightRecord[start] = first
       }
       while (visibleHeight - first < clientHeight && end < this.data.length) {
         let currentHeight = this.itemHeightRecord[end]
@@ -133,13 +132,14 @@ export default {
           this.updateBIT(end + 1, diffrence)
           lastTotalHeight += diffrence
           // 更新记录
-          this.$set(this.itemHeightRecord, end, currentHeight)
+          this.itemHeightRecord[end] = currentHeight
         }
         visibleHeight += currentHeight
         end++
       }
+
       /** 赋值可见列表 */
-      this.visibleList = this.data.slice(start, end)
+      this.visibleList = this.getVisibleList(start, end)
       /** 更新已滚过的高度 */
       this.topHeight = scrolledHeight
       this.totalHeight = lastTotalHeight
@@ -150,18 +150,21 @@ export default {
       this.updateVisibleList(this.$el.scrollTop)
     }
   },
-  mounted () {
+  created () {
+    this.itemHeightRecord = []
     if (this.data.length === 0) {
       return
     }
     this.totalHeight = this.data.length * this.itemHeight
     this.initBIT()
-
+  },
+  mounted () {
     // 因为要获取 scrollTop 跟 clientHeight ，所以要在 mounted 更新可见数据
     this.updateVisibleList()
   },
   watch: {
     data () {
+      this.itemHeightRecord = []
       this.totalHeight = this.data.length * this.itemHeight
       this.initBIT()
       this.updateVisibleList()
