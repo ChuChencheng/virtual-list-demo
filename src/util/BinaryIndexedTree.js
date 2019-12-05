@@ -37,7 +37,7 @@ class BinaryIndexedTree {
   }
   // 计算前 n 项的和 , 1<=n<this.tree.length
   // O(logn)
-  prefixSum (n) {
+  prefixSum (n = this.tree.length - 1) {
     let sum = 0
     while (n > 0) {
       sum += this.tree[n]
